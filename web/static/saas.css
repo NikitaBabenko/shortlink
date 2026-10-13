@@ -11,3 +11,82 @@
 .saas-target-editor{display:grid;gap:16px}.saas-target-head,.saas-target-row{display:grid;grid-template-columns:1fr 2.2fr .8fr .7fr .8fr .9fr 38px;gap:8px;align-items:center}.saas-target-head{padding:0 4px;color:var(--muted,#64748b);font-size:12px}.saas-target-row input,.saas-target-row select{min-width:0;width:100%;padding:9px;border:1px solid var(--line,#e5e7eb);border-radius:8px;background:var(--panel,#fff);color:inherit}.modal-card.wide{width:min(1180px,calc(100vw - 32px))}
 @media(max-width:1050px){.saas-plan-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.saas-target-head{display:none}.saas-target-row{grid-template-columns:1fr 1fr}.saas-target-row [data-field="url"]{grid-column:1/-1}.saas-target-row [data-remove-target]{justify-self:end}}
 @media(max-width:760px){.saas-grid.two,.saas-plan-grid{grid-template-columns:1fr}.saas-card{padding:15px}.saas-target-row{grid-template-columns:1fr}.saas-target-row [data-field="url"]{grid-column:auto}.saas-table-wrap table{min-width:720px}}
+
+.saas-review-section { min-width: 0; padding: 4px 0 20px; border-bottom: 1px solid var(--line); }
+.saas-review-section h2 { font-size: 18px; }
+.saas-review-table { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.saas-review-table td { height: auto; }
+.saas-review-table td:first-child { max-width: 320px; white-space: normal; overflow-wrap: anywhere; }
+.saas-review-table .saas-review-note-cell { max-width: 300px; white-space: normal; overflow-wrap: anywhere; }
+.saas-review-table td:last-child { width: 1%; }
+.saas-review-table button { min-height: 36px; height: 36px; padding: 0 12px; font-size: 13px; white-space: nowrap; }
+.saas-review-table .saas-review-empty { padding: 36px; text-align: center; color: var(--muted); }
+.saas-review-dialog { width: min(920px, calc(100vw - 40px)); max-width: none; height: min(850px, calc(100dvh - 48px)); max-height: none; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text); overflow: hidden; box-shadow: var(--shadow-lg); }
+.saas-review-dialog[open] { display: flex; flex-direction: column; }
+.saas-review-dialog::backdrop { background: rgba(16, 24, 40, .55); }
+.saas-review-header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--line); }
+.saas-review-header h2 { margin: 0; font-size: 18px; }
+.saas-review-header .icon { flex: none; border-radius: 6px; background: var(--panel-soft); color: var(--muted); }
+.saas-review-body { flex: 1; min-height: 0; overflow-y: auto; padding: 24px; overscroll-behavior: contain; }
+.saas-review-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 24px; }
+.saas-review-summary h3 { flex: 1 1 100%; order: 3; margin: 0; font-size: 21px; line-height: 1.4; overflow-wrap: anywhere; }
+.saas-review-summary > span:last-of-type { color: var(--muted); font-size: 13px; }
+.saas-review-summary p { flex: 1 1 100%; order: 4; margin: 0; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.saas-review-block { margin: 0 0 24px; }
+.saas-review-block:last-child { margin-bottom: 0; }
+.saas-review-block > h3 { margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.saas-review-block p { font-size: 13px; }
+.saas-review-request-note { white-space: pre-wrap; overflow-wrap: anywhere; }
+.saas-review-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; margin: 0; font-size: 13px; line-height: 1.5; }
+.saas-review-facts > div { min-width: 0; }
+.saas-review-facts dt { margin-bottom: 4px; color: var(--muted); }
+.saas-review-facts dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.saas-review-link { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.saas-review-link i { margin-left: 4px; }
+.saas-review-qr-item { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.saas-review-qr-item:last-child { border-bottom: 0; }
+.saas-review-qr-item figure { margin: 0; min-width: 0; }
+.saas-review-qr-item figure > a { display: grid; place-items: center; height: 240px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.saas-review-qr-item img { display: block; width: 100%; height: 100%; max-height: 238px; object-fit: contain; }
+.saas-review-qr-item figcaption { margin-top: 8px; font-size: 12px; color: var(--muted); }
+.saas-review-qr-item h4, .saas-review-targets h4 { margin: 0 0 12px; font-size: 14px; overflow-wrap: anywhere; }
+.saas-review-targets > article { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.saas-review-targets > article:last-child { border-bottom: 0; }
+.saas-review-history { list-style: none; margin: 0; padding: 0; }
+.saas-review-history li { border-left: 2px solid var(--line); padding: 0 0 18px 14px; font-size: 13px; }
+.saas-review-history li:last-child { padding-bottom: 0; }
+.saas-review-history li div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.saas-review-history span { color: var(--muted); font-size: 12px; }
+.saas-review-history p { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.saas-review-footer { flex: none; display: grid; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--line); background: var(--panel-soft); }
+.saas-review-footer .field { margin: 0; gap: 6px; font-size: 12px; }
+.saas-review-footer textarea { width: 100%; min-height: 62px; max-height: 100px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; background: var(--panel); color: var(--text); resize: vertical; }
+.saas-review-buttons { display: flex; justify-content: flex-end; gap: 8px; }
+.saas-review-buttons button { min-height: 38px; font-size: 13px; border-radius: 6px; }
+.saas-review-checkbox { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.saas-review-checkbox input { flex: none; width: 16px; height: 16px; min-height: 0; padding: 0; accent-color: var(--primary); }
+.saas-review-error { margin: 0; color: var(--bad, #b42318); font-size: 13px; }
+.saas-review-warning { display: flex; gap: 10px; margin-bottom: 24px; padding: 12px 14px; border: 1px solid #e3b34c; border-radius: 6px; color: var(--text); font-size: 13px; }
+.saas-review-warning i { flex: none; color: #bc8010; }
+.saas-review-warning p { margin: 0 0 4px; }
+.saas-review-warning p:last-child { margin-bottom: 0; }
+.saas-plan-comparison table { table-layout: fixed; min-width: 580px; }
+.saas-plan-comparison th, .saas-plan-comparison td { white-space: normal; overflow-wrap: anywhere; vertical-align: top; font-size: 13px; padding: 10px 12px; }
+.saas-plan-comparison th:first-child { width: 22%; }
+.saas-plan-comparison th small { display: block; margin-top: 4px; font-weight: 400; }
+.saas-plan-comparison .saas-plan-changed { color: var(--primary); font-weight: 650; }
+@media (max-width: 640px) {
+  .saas-review-dialog { width: calc(100vw - 16px); height: calc(100dvh - 20px); }
+  .saas-review-header, .saas-review-body, .saas-review-footer { padding: 14px 16px; }
+  .saas-review-summary h3 { font-size: 18px; }
+  .saas-review-facts { grid-template-columns: 1fr; gap: 12px; }
+  .saas-review-qr-item { grid-template-columns: 1fr; gap: 16px; }
+  .saas-review-qr-item figure { width: min(220px, 100%); }
+  .saas-review-qr-item .saas-review-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .saas-review-buttons { flex-wrap: wrap; }
+  .saas-review-buttons button { padding: 9px 12px; }
+  .saas-review-checkbox { align-items: flex-start; }
+  .saas-review-checkbox input { margin-top: 2px; }
+  .saas-plan-comparison table { min-width: 0; }
+  .saas-plan-comparison th, .saas-plan-comparison td { padding: 9px 8px; font-size: 12px; }
+}

@@ -45,6 +45,7 @@ jobs:
         run: |
           node --check web/static/app.js
           node --check web/static/platform_ext.js
+          node --check web/static/saas.js
 
       - name: Check whitespace
         run: git diff --check

@@ -1191,7 +1191,7 @@ func insertApprovalEventTx(ctx context.Context, tx *sql.Tx, tenantID int64, reso
 	return err
 }
 
-func (s *Store) ReviewResourceTenant(ctx context.Context, tenantID, actorID int64, resourceType string, resourceID int64, action, note string, includeItems bool) error {
+func (s *Store) ReviewResourceTenant(ctx context.Context, tenantID, actorID int64, resourceType string, resourceID int64, action, note string, includeItems bool, expectedVersion ...int64) error {
 	action = strings.ToLower(strings.TrimSpace(action))
 	if action != "approve" && action != "reject" {
 		return fmt.Errorf("action must be approve or reject")
@@ -1208,6 +1208,9 @@ func (s *Store) ReviewResourceTenant(ctx context.Context, tenantID, actorID int6
 	if actualTenant != tenantID {
 		return ErrTenantForbidden
 	}
+	if len(expectedVersion) > 0 && expectedVersion[0] > 0 && version != expectedVersion[0] {
+		return fmt.Errorf("%w: content changed; reload the review details", ErrApprovalState)
+	}
 	if current != "tenant_pending" && current != "tenant_rejected" {
 		return fmt.Errorf("%w: expected tenant_pending, got %s", ErrApprovalState, current)
 	}
@@ -1222,7 +1225,7 @@ func (s *Store) ReviewResourceTenant(ctx context.Context, tenantID, actorID int6
 		return err
 	}
 	if resourceType == "live_qr" && includeItems {
-		rows, err := tx.QueryContext(ctx, `SELECT id,content_version FROM live_qr_items WHERE live_qr_id=?`, resourceID)
+		rows, err := tx.QueryContext(ctx, `SELECT id,content_version FROM live_qr_items WHERE live_qr_id=? AND approval_status IN ('tenant_pending','tenant_rejected')`, resourceID)
 		if err != nil {
 			return err
 		}
@@ -1251,7 +1254,7 @@ func (s *Store) ReviewResourceTenant(ctx context.Context, tenantID, actorID int6
 	return tx.Commit()
 }
 
-func (s *Store) ReviewResourcePlatform(ctx context.Context, actorID int64, resourceType string, resourceID int64, action, note string, includeItems bool) error {
+func (s *Store) ReviewResourcePlatform(ctx context.Context, actorID int64, resourceType string, resourceID int64, action, note string, includeItems bool, expectedVersion ...int64) error {
 	action = strings.ToLower(strings.TrimSpace(action))
 	if action != "approve" && action != "reject" {
 		return fmt.Errorf("action must be approve or reject")
@@ -1264,6 +1267,9 @@ func (s *Store) ReviewResourcePlatform(ctx context.Context, actorID int64, resou
 	tenantID, version, current, err := getResourceReviewStateTx(ctx, tx, s.mode, resourceType, resourceID)
 	if err != nil {
 		return err
+	}
+	if len(expectedVersion) > 0 && expectedVersion[0] > 0 && version != expectedVersion[0] {
+		return fmt.Errorf("%w: content changed; reload the review details", ErrApprovalState)
 	}
 	if current != "platform_pending" && current != "platform_rejected" {
 		return fmt.Errorf("%w: expected platform_pending, got %s", ErrApprovalState, current)
@@ -1333,7 +1339,8 @@ func (s *Store) ListApprovalQueue(ctx context.Context, tenantID int64, stage str
 	}
 	query := `SELECT x.tenant_id,t.name,x.resource_type,x.resource_id,x.code,x.title,x.approval_status,x.content_version,x.owner_account_id,x.updated_at FROM (` +
 		`SELECT tenant_id,'short_link' resource_type,id resource_id,code,title,approval_status,content_version,owner_account_id,updated_at FROM short_links ` +
-		`UNION ALL SELECT tenant_id,'live_qr' resource_type,id resource_id,code,title,approval_status,content_version,owner_account_id,updated_at FROM live_qrs` +
+		`UNION ALL SELECT tenant_id,'live_qr' resource_type,id resource_id,code,title,approval_status,content_version,owner_account_id,updated_at FROM live_qrs ` +
+		`UNION ALL SELECT l.tenant_id,'live_qr_item',i.id,l.code,i.title,i.approval_status,i.content_version,l.owner_account_id,i.updated_at FROM live_qr_items i JOIN live_qrs l ON l.id=i.live_qr_id WHERE i.approval_status<>l.approval_status` +
 		`) x JOIN tenants t ON t.id=x.tenant_id WHERE x.approval_status=?` + whereTenant + ` ORDER BY x.updated_at ASC LIMIT 500`
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -1356,7 +1363,7 @@ func (s *Store) ListApprovalQueue(ctx context.Context, tenantID int64, stage str
 }
 
 func (s *Store) ListApprovalEvents(ctx context.Context, tenantID int64, resourceType string, resourceID int64) ([]model.ApprovalEvent, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,tenant_id,resource_type,resource_id,content_version,stage,action,actor_account_id,note,created_at FROM approval_events WHERE tenant_id=? AND resource_type=? AND resource_id=? ORDER BY id DESC`, tenantID, resourceType, resourceID)
+	rows, err := s.db.QueryContext(ctx, `SELECT e.id,e.tenant_id,e.resource_type,e.resource_id,e.content_version,e.stage,e.action,e.actor_account_id,COALESCE(a.name,''),e.note,e.created_at FROM approval_events e LEFT JOIN admin_accounts a ON a.id=e.actor_account_id WHERE e.tenant_id=? AND e.resource_type=? AND e.resource_id=? ORDER BY e.id DESC`, tenantID, resourceType, resourceID)
 	if err != nil {
 		return nil, err
 	}
@@ -1364,7 +1371,7 @@ func (s *Store) ListApprovalEvents(ctx context.Context, tenantID int64, resource
 	out := []model.ApprovalEvent{}
 	for rows.Next() {
 		var e model.ApprovalEvent
-		if err := rows.Scan(&e.ID, &e.TenantID, &e.ResourceType, &e.ResourceID, &e.ContentVersion, &e.Stage, &e.Action, &e.ActorAccountID, &e.Note, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.TenantID, &e.ResourceType, &e.ResourceID, &e.ContentVersion, &e.Stage, &e.Action, &e.ActorAccountID, &e.ActorName, &e.Note, &e.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, e)

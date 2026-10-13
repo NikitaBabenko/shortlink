@@ -106,8 +106,35 @@ type ApprovalEvent struct {
 	Stage          string    `json:"stage"`
 	Action         string    `json:"action"`
 	ActorAccountID int64     `json:"actor_account_id"`
+	ActorName      string    `json:"actor_name"`
 	Note           string    `json:"note"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+type ReviewAccount struct {
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+type ApprovalDetail struct {
+	ResourceType   string           `json:"resource_type"`
+	Tenant         Tenant           `json:"tenant"`
+	Owner          *ReviewAccount   `json:"owner"`
+	ContentVersion int64            `json:"content_version"`
+	Resource       any              `json:"resource"`
+	Parent         *LiveQRWorkspace `json:"parent,omitempty"`
+	Events         []ApprovalEvent  `json:"events"`
+}
+
+type SubscriptionRequestDetail struct {
+	Request     SubscriptionChangeRequest `json:"request"`
+	Tenant      Tenant                    `json:"tenant"`
+	Requester   *ReviewAccount            `json:"requester"`
+	TenantOwner *ReviewAccount            `json:"tenant_owner"`
+	FromPlan    Plan                      `json:"from_plan"`
+	ToPlan      Plan                      `json:"to_plan"`
+	Quota       TenantQuotaSnapshot       `json:"quota"`
 }
 
 type ApprovalQueueItem struct {

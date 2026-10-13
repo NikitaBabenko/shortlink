@@ -241,6 +241,12 @@ func (s *Server) handleSaaSManagement(w http.ResponseWriter, r *http.Request, pa
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "data": items})
+	case strings.HasPrefix(path, "/saas/reviews/") && r.Method == http.MethodGet:
+		if !ta.canReview() {
+			writeJSON(w, http.StatusForbidden, apiErr("forbidden", "当前角色没有租户审批权限"))
+			return
+		}
+		s.handleApprovalDetail(w, r, strings.TrimPrefix(path, "/saas/reviews/"), ta.Tenant.ID, false)
 	case strings.HasPrefix(path, "/saas/reviews/") && r.Method == http.MethodPost:
 		if !ta.canReview() {
 			writeJSON(w, http.StatusForbidden, apiErr("forbidden", "当前角色没有租户审批权限"))
@@ -257,16 +263,17 @@ func (s *Server) handleSaaSManagement(w http.ResponseWriter, r *http.Request, pa
 			return
 		}
 		var p struct {
-			Action       string `json:"action"`
-			Status       string `json:"status"`
-			Note         string `json:"note"`
-			IncludeItems bool   `json:"include_items"`
+			Action         string `json:"action"`
+			Status         string `json:"status"`
+			Note           string `json:"note"`
+			IncludeItems   bool   `json:"include_items"`
+			ContentVersion int64  `json:"content_version"`
 		}
 		if !decodeBody(w, r, &p) {
 			return
 		}
 		action := normalizeReviewAction(p.Action, p.Status)
-		if err := s.store().ReviewResourceTenant(r.Context(), ta.Tenant.ID, ta.Actor.Account.ID, parts[0], id, action, p.Note, p.IncludeItems); err != nil {
+		if err := s.store().ReviewResourceTenant(r.Context(), ta.Tenant.ID, ta.Actor.Account.ID, parts[0], id, action, p.Note, p.IncludeItems, p.ContentVersion); err != nil {
 			writeSaaSError(w, err)
 			return
 		}
@@ -404,6 +411,8 @@ func (s *Server) handlePlatformManagement(w http.ResponseWriter, r *http.Request
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "data": items})
+	case strings.HasPrefix(path, "/saas/platform/reviews/") && r.Method == http.MethodGet:
+		s.handleApprovalDetail(w, r, strings.TrimPrefix(path, "/saas/platform/reviews/"), 0, true)
 	case strings.HasPrefix(path, "/saas/platform/reviews/") && r.Method == http.MethodPost:
 		parts := splitPath(strings.TrimPrefix(path, "/saas/platform/reviews/"))
 		if len(parts) != 2 {
@@ -416,16 +425,17 @@ func (s *Server) handlePlatformManagement(w http.ResponseWriter, r *http.Request
 			return
 		}
 		var p struct {
-			Action       string `json:"action"`
-			Status       string `json:"status"`
-			Note         string `json:"note"`
-			IncludeItems bool   `json:"include_items"`
+			Action         string `json:"action"`
+			Status         string `json:"status"`
+			Note           string `json:"note"`
+			IncludeItems   bool   `json:"include_items"`
+			ContentVersion int64  `json:"content_version"`
 		}
 		if !decodeBody(w, r, &p) {
 			return
 		}
 		action := normalizeReviewAction(p.Action, p.Status)
-		if err := s.store().ReviewResourcePlatform(r.Context(), actor.Account.ID, parts[0], id, action, p.Note, p.IncludeItems); err != nil {
+		if err := s.store().ReviewResourcePlatform(r.Context(), actor.Account.ID, parts[0], id, action, p.Note, p.IncludeItems, p.ContentVersion); err != nil {
 			writeSaaSError(w, err)
 			return
 		}
@@ -439,6 +449,23 @@ func (s *Server) handlePlatformManagement(w http.ResponseWriter, r *http.Request
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "data": items})
+	case strings.HasPrefix(path, "/saas/platform/subscription-requests/") && r.Method == http.MethodGet:
+		parts := splitPath(strings.TrimPrefix(path, "/saas/platform/subscription-requests/"))
+		if len(parts) != 1 {
+			writeJSON(w, http.StatusBadRequest, apiErr("bad_path", "订阅申请路径不正确"))
+			return
+		}
+		id, err := strconv.ParseInt(parts[0], 10, 64)
+		if err != nil || id <= 0 {
+			writeJSON(w, http.StatusBadRequest, apiErr("bad_id", "申请 ID 不正确"))
+			return
+		}
+		detail, err := s.store().GetSubscriptionRequestDetail(r.Context(), id)
+		if err != nil {
+			writeSaaSError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "data": detail})
 	case strings.HasPrefix(path, "/saas/platform/subscription-requests/") && r.Method == http.MethodPost:
 		parts := splitPath(strings.TrimPrefix(path, "/saas/platform/subscription-requests/"))
 		if len(parts) != 1 {
