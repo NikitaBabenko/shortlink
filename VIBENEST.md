@@ -32,7 +32,7 @@ Verification targets the actual Free allocation: 256 MB RAM, 0.5 vCPU and 4 GB s
 
 Guarded application revision `7657f986d96b5cea2ad5d640688ce58b7a5d8cd2` completed a fresh Dockerfile deployment (attempt 5334). The running image was `sha256:554cd15109cc702c1a9eba130e3f257c0677c8d97da2480cd654039faaa35efd`. Its Dockerfile requires the actual-router/SQLite, middleware and configuration tests to succeed before compilation. The successful exact-revision image build confirms that blocking build step completed; the available condensed deployment log did not expose individual test stdout lines.
 
-All 24 initial HTTP checks passed: HTTPS health, setup guard rejection of missing/wrong credentials, cross-origin rejection, authorized fresh setup/database test/install, anonymous admin rejection, authenticated session, reviewed short-link redirect, QR image, repeat-install refusal and Secure cookies. All 20 checks after one normal owner-interface Restart also passed. The same container and image restarted; the administrator session, SQLite link and approvals persisted. This is restart persistence, not a replacement-container persistence claim for this guarded revision.
+All 24 initial HTTP checks passed: HTTPS health, setup guard rejection of missing/wrong credentials, cross-origin rejection, authorized fresh setup/database test/install, anonymous admin rejection, authenticated session, reviewed short-link redirect, QR image, repeat-install refusal and Secure cookies. All 19 checks after one normal owner-interface Restart also passed. The same container and image restarted; the administrator session, SQLite link and approvals persisted. This is restart persistence, not a replacement-container persistence claim for this guarded revision.
 
 Six platform-agent samples from 15:04:52 to 15:10:11 UTC (5 minutes 19 seconds) showed 2.68–4.76 MB memory usage, a 256 MB memory limit and zero automatic restarts. These samples do not measure the startup peak. Actual CPU cgroup quota, filesystem usage/quota and long-duration capacity remain unverified. The Free allocation was released through the normal owner interface after testing; the installation is not an always-on demo.
 
@@ -47,3 +47,4 @@ The temporary pilot was stopped and its Free server released after testing; the 
 A later normal resume of the historical installation was refused because its domain remained assigned to a saved provider application. No provider override or resource rebind was performed. The guarded test above used a separately authorized blank synthetic installation, not recovery of the historical data. This resume limitation is separate from the successful fresh guided-installation result.
 
 Upstream: https://github.com/flyfish-dev/shortlink
+
