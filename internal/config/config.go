@@ -15,21 +15,24 @@ import (
 const RuntimeConfigFile = "app-config.json"
 
 type Config struct {
-	AppName            string
-	BaseURL            string
-	Addr               string
-	DatabaseMode       string
-	DSN                string
-	SQLitePath         string
-	AppSecret          string
-	DataDir            string
-	AutoMigrate        bool
-	TrustProxy         bool
-	CookieSecure       bool
-	SessionTTL         time.Duration
-	UploadMaxBytes     int64
-	GitHubClientID     string
-	GitHubClientSecret string
+	AppName                string
+	BaseURL                string
+	Addr                   string
+	DatabaseMode           string
+	DSN                    string
+	SQLitePath             string
+	AppSecret              string
+	DataDir                string
+	AutoMigrate            bool
+	TrustProxy             bool
+	CookieSecure           bool
+	SessionTTL             time.Duration
+	UploadMaxBytes         int64
+	GitHubClientID         string
+	GitHubClientSecret     string
+	VibeNestPilot          bool
+	SetupBootstrapUser     string `json:"-"`
+	SetupBootstrapPassword string `json:"-"`
 }
 
 type RuntimeConfig struct {
@@ -45,21 +48,24 @@ func Load() Config {
 	dataDir := getenv("DATA_DIR", "./data")
 	rc, _ := LoadRuntime(dataDir)
 	c := Config{
-		AppName:            getenv("APP_NAME", "AI短链平台"),
-		BaseURL:            strings.TrimRight(os.Getenv("APP_BASE_URL"), "/"),
-		Addr:               defaultAddr(),
-		DatabaseMode:       firstNonEmpty(os.Getenv("DATABASE_MODE"), rc.DatabaseMode, "embedded"),
-		DSN:                firstNonEmpty(os.Getenv("DATABASE_DSN"), rc.DSN, "shortlink:shortlink@tcp(127.0.0.1:3306)/ai_shortlink?charset=utf8mb4&parseTime=true&loc=Local&multiStatements=true"),
-		SQLitePath:         firstNonEmpty(os.Getenv("SQLITE_PATH"), rc.SQLitePath, filepath.Join(dataDir, "ai-shortlink.db")),
-		AppSecret:          firstNonEmpty(os.Getenv("APP_SECRET"), rc.AppSecret),
-		DataDir:            dataDir,
-		AutoMigrate:        getenvBool("AUTO_MIGRATE", true),
-		TrustProxy:         getenvBoolWithRuntime("TRUST_PROXY", rc.TrustProxy, false),
-		CookieSecure:       getenvBoolWithRuntime("COOKIE_SECURE", rc.CookieSecure, false),
-		SessionTTL:         time.Duration(getenvInt("SESSION_TTL_HOURS", 24*365*10)) * time.Hour,
-		UploadMaxBytes:     int64(getenvInt("UPLOAD_MAX_MB", 8)) * 1024 * 1024,
-		GitHubClientID:     strings.TrimSpace(os.Getenv("GITHUB_CLIENT_ID")),
-		GitHubClientSecret: strings.TrimSpace(os.Getenv("GITHUB_CLIENT_SECRET")),
+		AppName:                getenv("APP_NAME", "AI短链平台"),
+		BaseURL:                strings.TrimRight(os.Getenv("APP_BASE_URL"), "/"),
+		Addr:                   defaultAddr(),
+		DatabaseMode:           firstNonEmpty(os.Getenv("DATABASE_MODE"), rc.DatabaseMode, "embedded"),
+		DSN:                    firstNonEmpty(os.Getenv("DATABASE_DSN"), rc.DSN, "shortlink:shortlink@tcp(127.0.0.1:3306)/ai_shortlink?charset=utf8mb4&parseTime=true&loc=Local&multiStatements=true"),
+		SQLitePath:             firstNonEmpty(os.Getenv("SQLITE_PATH"), rc.SQLitePath, filepath.Join(dataDir, "ai-shortlink.db")),
+		AppSecret:              firstNonEmpty(os.Getenv("APP_SECRET"), rc.AppSecret),
+		DataDir:                dataDir,
+		AutoMigrate:            getenvBool("AUTO_MIGRATE", true),
+		TrustProxy:             getenvBoolWithRuntime("TRUST_PROXY", rc.TrustProxy, false),
+		CookieSecure:           getenvBoolWithRuntime("COOKIE_SECURE", rc.CookieSecure, false),
+		SessionTTL:             time.Duration(getenvInt("SESSION_TTL_HOURS", 24*365*10)) * time.Hour,
+		UploadMaxBytes:         int64(getenvInt("UPLOAD_MAX_MB", 8)) * 1024 * 1024,
+		GitHubClientID:         strings.TrimSpace(os.Getenv("GITHUB_CLIENT_ID")),
+		GitHubClientSecret:     strings.TrimSpace(os.Getenv("GITHUB_CLIENT_SECRET")),
+		VibeNestPilot:          pilotModeEnabled(os.Getenv("VIBENEST_PILOT")),
+		SetupBootstrapUser:     os.Getenv("SETUP_BOOTSTRAP_USER"),
+		SetupBootstrapPassword: os.Getenv("SETUP_BOOTSTRAP_PASSWORD"),
 	}
 	c.DatabaseMode = NormalizeDatabaseMode(c.DatabaseMode)
 	if c.AppSecret == "" {
@@ -68,6 +74,16 @@ func Load() Config {
 		_ = SaveRuntime(dataDir, RuntimeConfig{DatabaseMode: c.DatabaseMode, DSN: c.DSN, SQLitePath: c.SQLitePath, AppSecret: c.AppSecret, TrustProxy: c.TrustProxy, CookieSecure: c.CookieSecure})
 	}
 	return c
+}
+
+// A malformed, nonempty pilot flag must not silently disable setup protection.
+func pilotModeEnabled(value string) bool {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return false
+	}
+	enabled, err := strconv.ParseBool(value)
+	return err != nil || enabled
 }
 
 func NormalizeDatabaseMode(v string) string {

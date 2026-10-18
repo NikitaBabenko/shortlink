@@ -2,13 +2,19 @@
 
 [![Deploy to VibeNest](https://vibenest.net/deploy-to-vibenest.svg)](https://vibenest.net/deploy?repo=https://github.com/NikitaBabenko/shortlink)
 
-This independent integration fork preserves the upstream application and AGPL license. A basic runtime and persistence pilot passed on 18 October 2026 with a measured 256 MB container memory limit. Full Free-tier certification and an unattended one-click installation remain pending. The badge opens VibeNest's repository preview; it does not configure the persistent mount or complete the application's setup wizard.
+This independent integration fork preserves the upstream AGPL license and adds a narrow setup-authentication guard for hosted pilots. A basic runtime and persistence pilot passed on 18 October 2026 on the earlier revision documented below, with a measured 256 MB container memory limit. The new guard still requires production validation. Full Free-tier certification and an unattended one-click installation remain pending. The badge opens VibeNest's repository preview; it does not configure the persistent mount or complete the application's setup wizard.
 
 Use SQLite mode, internal port `8080`, and persistent storage mounted at `/app/data`. Do not enable the optional `mysql` Compose profile for the initial pilot. When choosing the root Dockerfile instead of Compose, explicitly configure the same persistent mount before deploying.
 
 Set `APP_ADDR=:8080`, `DATA_DIR=/app/data`, `DATABASE_MODE=embedded`, `COOKIE_SECURE=true`, and `APP_BASE_URL=https://YOUR-SUBDOMAIN.vibenest.net`. Preserve the entire data directory across redeploys and keep the application secret stable. The tested VibeNest path generated `APP_SECRET` automatically. Configure trusted-proxy handling according to the actual platform topology.
 
-Complete `/setup` and create the administrator before sharing the address. OAuth and SMTP integrations require the operator's own credentials and are not configured by the badge. Never put secrets in Git.
+Before the first deployment, set `VIBENEST_PILOT=true`, `SETUP_BOOTSTRAP_USER` to an operator-selected username, and `SETUP_BOOTSTRAP_PASSWORD` to a unique randomly generated password of at least 24 characters (32 random bytes encoded as hex is suitable). The username must not contain a colon or CR/LF. Supply these through private environment settings, never Git or a public URL. The runtime Dockerfile enables `VIBENEST_PILOT=true` by default and contains no default credentials.
+
+Open `/setup` over HTTPS, enter the bootstrap credentials in the browser's HTTP Basic authentication prompt, and complete the application wizard to create the administrator. The guard covers `/setup`, its descendants, and every `/api/setup/*` route and method, including the database test. Missing or invalid bootstrap configuration returns HTTP 503; missing or incorrect authentication returns HTTP 401. Cross-origin state-changing setup requests return HTTP 403. Keep `APP_BASE_URL` equal to the public HTTPS origin so same-origin browser requests behind the platform proxy are recognized. Command-line operator clients may omit Origin/Fetch Metadata headers but still require the bootstrap credentials.
+
+Bootstrap credentials are read only from environment variables and are not saved to `app-config.json` or exposed in the public bootstrap response. They remain required for setup endpoints after installation. Public short-link redirects, QR images, login and existing administrator sessions retain their application behavior. After setup, the operator may remove both bootstrap credential variables to close all setup routes with HTTP 503 while leaving the application available. Keep pilot mode enabled. Outside this Docker image, an absent or explicit false pilot flag preserves upstream behavior; a malformed nonempty flag enables the guard instead of disabling it.
+
+OAuth and SMTP integrations require the operator's own credentials and are not configured by the badge. Never put secrets in Git.
 
 ## Automatic configuration: current boundary
 
@@ -16,7 +22,9 @@ The repository's existing `render.yaml` declares Docker, `/healthz`, SQLite mode
 
 The minimum repeatable configuration is one root Dockerfile service on port `8080`, a required writable `/app/data` volume attached before the first process starts, and the environment listed above. The volume must contain the SQLite database, `app-config.json` and uploads. If `APP_SECRET` is absent, the application generates a secret and saves it in `app-config.json`; if an environment secret is supplied, it takes precedence. Keep whichever secret source is used stable across replacements. Do not introduce a new environment secret over an existing installation's saved secret.
 
-First-administrator setup is still an explicit owner step. The upstream installer accepts the first administrator on an uninstalled instance; a complete hosted onboarding flow needs owner-only access to setup before public exposure. Keeping the URL unshared is not an access control. Automatic storage, stable environment preparation and protected first setup remain acceptance requirements, not capabilities certified by this fork.
+First-administrator setup is still an explicit owner step. The fork's bootstrap guard protects that step when configured as above; keeping the URL unshared is not an access control. Automatic storage, stable environment preparation and a production check of protected first setup remain acceptance requirements. Each Docker image build must pass the targeted real-router/SQLite setup-auth tests before compiling the application.
+
+If a normal platform flow creates a new application and empty volume, completing its protected setup is a new synthetic installation, not restoration of the historical database. Preserve old application and volume objects. Do not reset, delete or manually rebind them to manufacture a successful restoration result.
 
 Verification targets the actual Free allocation: 256 MB RAM, 0.5 vCPU and 4 GB storage. Check startup and peak memory, setup/login, a public short link and QR code, HTTPS, and persistence after restart/redeploy. A build or HTTP 200 alone does not establish suitability.
 

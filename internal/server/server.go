@@ -19,6 +19,7 @@ import (
 	"ai-shortlink/internal/auth"
 	"ai-shortlink/internal/config"
 	"ai-shortlink/internal/model"
+	"ai-shortlink/internal/setupauth"
 	"ai-shortlink/internal/store"
 	"ai-shortlink/internal/util"
 	webassets "ai-shortlink/web"
@@ -103,7 +104,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("/q/", s.liveQRPublic)
 	mux.HandleFunc("/", s.root)
 
-	return recoverer(logger(securityHeaders(mux)))
+	return recoverer(logger(securityHeaders(setupauth.Protect(mux, s.cfg.VibeNestPilot, s.cfg.SetupBootstrapUser, s.cfg.SetupBootstrapPassword, s.cfg.BaseURL))))
 }
 
 func (s *Server) loginPage(w http.ResponseWriter, r *http.Request) {
