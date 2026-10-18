@@ -6,6 +6,10 @@
 
 <h1 align="center">AI Shortlink</h1>
 
+[![Deploy to VibeNest](https://vibenest.net/deploy-to-vibenest.svg)](https://vibenest.net/deploy?repo=https://github.com/NikitaBabenko/shortlink)
+
+[VibeNest setup and verification status](VIBENEST.md)
+
 <p align="center">
   <strong>Keep every shared entry point controllable after it leaves your hands.</strong>
   <br>
