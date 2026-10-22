@@ -15,6 +15,20 @@ func TestPilotFlagFailsClosed(t *testing.T) {
 	}
 }
 
+func TestPilotPublicOriginAliasPreservesExplicitBaseURL(t *testing.T) {
+	t.Setenv("DATA_DIR", t.TempDir())
+	t.Setenv("APP_SECRET", "test-app-secret")
+	t.Setenv("APP_BASE_URL", "")
+	t.Setenv("APP_URL", "https://generated.example/")
+	if got := Load().BaseURL; got != "https://generated.example" {
+		t.Fatalf("Compose public origin = %q", got)
+	}
+	t.Setenv("APP_BASE_URL", "https://owner.example/")
+	if got := Load().BaseURL; got != "https://owner.example" {
+		t.Fatalf("explicit owner origin was replaced: %q", got)
+	}
+}
+
 func TestPilotCredentialsEnvOnly(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DATA_DIR", dir)

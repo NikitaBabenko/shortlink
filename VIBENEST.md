@@ -16,6 +16,16 @@ Bootstrap credentials are read only from environment variables and are not saved
 
 OAuth and SMTP integrations require the operator's own credentials and are not configured by the badge. Never put secrets in Git.
 
+## Button-path compatibility preparation — 22 October 2026
+
+The button-to-first-installation path is under renewed acceptance; the October 18 results below cover the manually configured Dockerfile path only. Do not treat those results as proof of a new user's automatic deployment.
+
+The fork now declares `SETUP_BOOTSTRAP_PASSWORD=` in `.env.example`, which the inspected VibeNest deploy code can replace with a separate random internal secret for each project. The non-secret bootstrap username defaults to `operator`. The owner can retrieve their project's password through **Project Settings → Environment → Reveal**, then open `/setup` over HTTPS. No password is stored in Git or printed into application logs. The application still refuses setup when credentials are missing or invalid.
+
+For a new automatically detected deployment, the current VibeNest resolver recognizes the upstream Compose file (including its optional `mysql` profile). The normal default profile runs the SQLite application; do not activate `mysql` for this pilot. The named `app_data:/app/data` mount is declared in that Compose file. The platform's Compose environment preparation supplies the project's HTTPS origin as `APP_URL`; the application accepts that alias, while an explicit `APP_BASE_URL` continues to take precedence. HTTPS cookies default to secure. Plain HTTP local development requires an explicit `COOKIE_SECURE=false`.
+
+These are source-verified integration contracts, not a completed production acceptance of the new button flow. The current platform counts profiled services when dividing the hardware budget: with both declared services and no explicit limits, a 256 MB project budget allocates 128 MB to each service. A future runtime check must verify the actual app limit and that the optional database did not start. GitHub App direct projects currently reject Compose; repository access must pass the normal platform checks. A previously configured Dockerfile project retains its existing configuration when the button reuses it, so such a retry cannot prove the new-project Compose path.
+
 ## Automatic configuration: current boundary
 
 The repository's existing `render.yaml` declares Docker, `/healthz`, SQLite mode and several environment defaults, but no persistent disk. VibeNest's inspected Render adapter currently rejects a `disk` declaration as `render_persistent_disk_unsupported`. Adding that field is not a working automatic-volume integration. The live badge preview follows the single-project launch path; a preview success does not prove that Render environment settings were applied.

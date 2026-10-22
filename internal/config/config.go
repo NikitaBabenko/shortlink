@@ -49,7 +49,7 @@ func Load() Config {
 	rc, _ := LoadRuntime(dataDir)
 	c := Config{
 		AppName:                getenv("APP_NAME", "AI短链平台"),
-		BaseURL:                strings.TrimRight(os.Getenv("APP_BASE_URL"), "/"),
+		BaseURL:                strings.TrimRight(firstNonEmpty(os.Getenv("APP_BASE_URL"), os.Getenv("APP_URL")), "/"),
 		Addr:                   defaultAddr(),
 		DatabaseMode:           firstNonEmpty(os.Getenv("DATABASE_MODE"), rc.DatabaseMode, "embedded"),
 		DSN:                    firstNonEmpty(os.Getenv("DATABASE_DSN"), rc.DSN, "shortlink:shortlink@tcp(127.0.0.1:3306)/ai_shortlink?charset=utf8mb4&parseTime=true&loc=Local&multiStatements=true"),
