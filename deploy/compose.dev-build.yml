@@ -1,0 +1,6 @@
+# Apply after docker-compose.dev.yml to use the preserved Dockerfile at its new path.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: deploy/vibenest/Dockerfile

@@ -41,7 +41,7 @@ Start the application and bundled MariaDB profile:
 
 ```bash
 cp .env.example .env
-docker compose --profile mysql up -d --build
+docker compose -f docker-compose.dev.yml -f deploy/compose.dev-build.yml --profile mysql up -d --build
 ```
 
 Choose MySQL/MariaDB in the setup wizard. The bundled development DSN is:

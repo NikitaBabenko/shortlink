@@ -79,6 +79,12 @@ AI 在这里有两层含义：
 | 私有部署 | Docker、Linux amd64 二进制、Render、SQLite、MySQL / MariaDB |
 | 国际化 | 中英文产品名称、界面与邮件文案，支持自动匹配浏览器语言 |
 
+## Fork deployment notes
+
+This integration fork uses a single SQLite application in `docker-compose.yml`, with its persistent `app_data` volume. The build uses `deploy/vibenest/Dockerfile` and the repository root as context. The original MySQL development Compose is preserved in `docker-compose.dev.yml`; select it with `-f docker-compose.dev.yml -f deploy/compose.dev-build.yml --profile mysql`.
+
+Before running this fork locally, copy `.env.example` to `.env`, set a unique `SETUP_BOOTSTRAP_PASSWORD` of at least 24 characters, and use `COOKIE_SECURE=false` only for plain HTTP localhost. The bootstrap username defaults to `operator`. On VibeNest, the prepared Compose path obtains a separate generated password from the platform; the owner retrieves it through Project Settings → Environment → Reveal. See [VIBENEST.md](VIBENEST.md) for the acceptance status and existing-installation limitations. The upstream quick-start commands below refer to the upstream repository.
+
 ## 快速开始
 
 最轻量的方式是使用 Docker 和内置 SQLite：
