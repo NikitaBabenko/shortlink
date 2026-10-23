@@ -8,6 +8,7 @@ on:
         required: true
         type: string
 
+# Permissions are job-scoped. Only the final step explicitly receives GITHUB_TOKEN.
 permissions:
   contents: read
   packages: write
@@ -25,55 +26,94 @@ jobs:
       EXACT_SHA: ${{ inputs.exact_sha }}
       IMAGE: ghcr.io/nikitababenko/shortlink
     steps:
-      - name: Require the exact reviewed workflow and source revision
+      - name: Validate revision and fetch public source without credentials
         shell: bash
         run: |
           set -euo pipefail
           [[ "$EXACT_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$EXACT_SHA" == "$GITHUB_SHA" ]]
-          docker buildx version
+          export GIT_TERMINAL_PROMPT=0
+          git init .
+          git remote add origin https://github.com/NikitaBabenko/shortlink.git
+          git -c credential.helper= fetch --depth=1 origin "$EXACT_SHA"
+          git checkout --detach FETCH_HEAD
+          [[ "$(git rev-parse HEAD)" == "$EXACT_SHA" ]]
 
-      - name: Authenticate for this repository's package publication
+      - name: Set up Go without Actions cache
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Install Linux test and OCI publication tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc libsqlite3-dev skopeo
+          docker buildx version
+          skopeo --version
+
+      - name: Run all checks preserved from CI
         shell: bash
         env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CGO_ENABLED: '1'
         run: |
           set -euo pipefail
-          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          go test ./...
+          go vet ./...
+          go build -trimpath -o "$RUNNER_TEMP/ai-shortlink-check" ./cmd/server
+          node --check web/static/app.js
+          node --check web/static/platform_ext.js
+          node --check web/static/saas.js
+          git diff --check
 
-      - name: Build the original Dockerfile, run its Linux gate, and publish
+      - name: Build one OCI archive with the original Dockerfile and Linux gate
         shell: bash
         run: |
           set -euo pipefail
+          export DOCKER_CONFIG="$RUNNER_TEMP/shortlink-build-docker-config"
+          mkdir -p "$DOCKER_CONFIG"
           docker buildx create --name pilot-publisher --driver docker-container --use
           docker buildx build \
             --platform linux/amd64 \
             --file deploy/vibenest/Dockerfile \
             --pull --no-cache \
-            --provenance=mode=max \
+            --provenance=mode=max,version=v0.2 \
             --label "org.opencontainers.image.source=https://github.com/NikitaBabenko/shortlink" \
             --label "org.opencontainers.image.revision=$EXACT_SHA" \
             --tag "$IMAGE:sha-$EXACT_SHA" \
             --metadata-file "$RUNNER_TEMP/shortlink-image-metadata.json" \
-            --push \
+            --output "type=oci,dest=$RUNNER_TEMP/shortlink-image.tar" \
             "https://github.com/NikitaBabenko/shortlink.git#$EXACT_SHA"
 
-      - name: Record immutable image identity in the run summary
+      - name: Verify the complete local OCI artifact before registry login
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          import json, os, pathlib, re
-          metadata = json.loads((pathlib.Path(os.environ['RUNNER_TEMP']) / 'shortlink-image-metadata.json').read_text())
-          digest = metadata['containerimage.digest']
-          assert re.fullmatch(r'sha256:[0-9a-f]{64}', digest), 'Invalid image digest'
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-              summary.write(f"Source: `https://github.com/NikitaBabenko/shortlink/commit/{os.environ['EXACT_SHA']}`\n\n")
-              summary.write(f"Image: `{os.environ['IMAGE']}@{digest}`\n\n")
-              summary.write('Public visibility, anonymous digest/provenance verification, and VibeNest runtime acceptance remain required.\n')
-          PY
+          skopeo inspect --raw "oci-archive:$RUNNER_TEMP/shortlink-image.tar" > "$RUNNER_TEMP/shortlink-image-index.json"
+          python3 deploy/vibenest/verify_oci.py \
+            "$RUNNER_TEMP/shortlink-image.tar" \
+            "$RUNNER_TEMP/shortlink-image-metadata.json" \
+            "$RUNNER_TEMP/shortlink-image-index.json" \
+            "$EXACT_SHA" > "$RUNNER_TEMP/shortlink-verified-digest.txt"
 
-      - name: Remove runner registry credentials
-        if: always()
+      - name: Authenticate and publish the verified archive without rebuilding
         shell: bash
-        run: docker logout ghcr.io
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          authfile="$RUNNER_TEMP/shortlink-push-auth.json"
+          trap 'rm -f -- "$authfile"' EXIT
+          printf '%s' "$GHCR_TOKEN" | skopeo login --authfile "$authfile" --username "$GITHUB_ACTOR" --password-stdin ghcr.io
+          skopeo copy --all --preserve-digests \
+            --dest-authfile "$authfile" \
+            --digestfile "$RUNNER_TEMP/shortlink-published-digest.txt" \
+            "oci-archive:$RUNNER_TEMP/shortlink-image.tar" \
+            "docker://$IMAGE:sha-$EXACT_SHA"
+          digest="$(cat "$RUNNER_TEMP/shortlink-verified-digest.txt")"
+          [[ "$(cat "$RUNNER_TEMP/shortlink-published-digest.txt")" == "$digest" ]]
+          printf 'Source: %s\n\nImage: %s@%s\n\n' \
+            "https://github.com/NikitaBabenko/shortlink/commit/$EXACT_SHA" "$IMAGE" "$digest" >> "$GITHUB_STEP_SUMMARY"
+          printf '%s\n' 'Public visibility and anonymous digest/provenance verification remain required; VibeNest runtime acceptance is separate.' >> "$GITHUB_STEP_SUMMARY"
