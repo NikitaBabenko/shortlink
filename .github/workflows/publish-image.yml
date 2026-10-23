@@ -1,0 +1,79 @@
+name: Publish reviewed pilot image
+
+on:
+  workflow_dispatch:
+    inputs:
+      exact_sha:
+        description: Full reviewed commit SHA (must match the selected workflow ref)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: shortlink-image-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'NikitaBabenko/shortlink' && github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXACT_SHA: ${{ inputs.exact_sha }}
+      IMAGE: ghcr.io/nikitababenko/shortlink
+    steps:
+      - name: Require the exact reviewed workflow and source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXACT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EXACT_SHA" == "$GITHUB_SHA" ]]
+          docker buildx version
+
+      - name: Authenticate for this repository's package publication
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+
+      - name: Build the original Dockerfile, run its Linux gate, and publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker buildx create --name pilot-publisher --driver docker-container --use
+          docker buildx build \
+            --platform linux/amd64 \
+            --file deploy/vibenest/Dockerfile \
+            --pull --no-cache \
+            --provenance=mode=max \
+            --label "org.opencontainers.image.source=https://github.com/NikitaBabenko/shortlink" \
+            --label "org.opencontainers.image.revision=$EXACT_SHA" \
+            --tag "$IMAGE:sha-$EXACT_SHA" \
+            --metadata-file "$RUNNER_TEMP/shortlink-image-metadata.json" \
+            --push \
+            "https://github.com/NikitaBabenko/shortlink.git#$EXACT_SHA"
+
+      - name: Record immutable image identity in the run summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, pathlib, re
+          metadata = json.loads((pathlib.Path(os.environ['RUNNER_TEMP']) / 'shortlink-image-metadata.json').read_text())
+          digest = metadata['containerimage.digest']
+          assert re.fullmatch(r'sha256:[0-9a-f]{64}', digest), 'Invalid image digest'
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write(f"Source: `https://github.com/NikitaBabenko/shortlink/commit/{os.environ['EXACT_SHA']}`\n\n")
+              summary.write(f"Image: `{os.environ['IMAGE']}@{digest}`\n\n")
+              summary.write('Public visibility, anonymous digest/provenance verification, and VibeNest runtime acceptance remain required.\n')
+          PY
+
+      - name: Remove runner registry credentials
+        if: always()
+        shell: bash
+        run: docker logout ghcr.io
