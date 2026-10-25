@@ -79,11 +79,17 @@ AI 在这里有两层含义：
 | 私有部署 | Docker、Linux amd64 二进制、Render、SQLite、MySQL / MariaDB |
 | 国际化 | 中英文产品名称、界面与邮件文案，支持自动匹配浏览器语言 |
 
-## Fork deployment notes
+## Guided deployment on VibeNest
 
-This integration fork uses a single SQLite application in `docker-compose.yml`, with its persistent `app_data` volume. The build uses `deploy/vibenest/Dockerfile` and the repository root as context. The original MySQL development Compose is preserved in `docker-compose.dev.yml`; select it with `-f docker-compose.dev.yml -f deploy/compose.dev-build.yml --profile mysql`.
+This fork uses a pinned, prebuilt Linux image through the root `Dockerfile`. VibeNest detects **Dockerfile, port 8080** for the single application. Full acceptance of this updated button path is still pending; the earlier manual pilot results are recorded in [VIBENEST.md](VIBENEST.md).
 
-Before running this fork locally, copy `.env.example` to `.env`, set a unique `SETUP_BOOTSTRAP_PASSWORD` of at least 24 characters, and use `COOKIE_SECURE=false` only for plain HTTP localhost. The bootstrap username defaults to `operator`. On VibeNest, the prepared Compose path obtains a separate generated password from the platform; the owner retrieves it through Project Settings → Environment → Reveal. See [VIBENEST.md](VIBENEST.md) for the acceptance status and existing-installation limitations. The upstream quick-start commands below refer to the upstream repository.
+1. Click **Deploy to VibeNest** above and register or sign in. Check that the repository remains `NikitaBabenko/shortlink` and the branch is `main`. If VibeNest reuses an existing project, review its saved settings; an old explicit Compose selection is not automatically reset. Use **Auto-detect** or **Dockerfile**, with internal port `8080`.
+2. Before opening the setup wizard or creating data, open **Project Settings → Environment**. Set `APP_BASE_URL` to the actual public HTTPS origin shown for your project (no path), and `DATA_DIR=/app/data`. Keep secure cookies enabled. The image defaults to pilot mode and bootstrap username `operator`; it contains no default password.
+3. Open **Project Settings → Storage**, enter `/app/data`, and choose **Attach Volume**. This immediately triggers a redeploy. Wait for it to finish and verify that the volume is attached without an error **before installing the application**. The first button launch has no persistent mount; the Compose volume is not applied by the Dockerfile buildpack.
+4. In **Environment**, use **Reveal** for the project's generated `SETUP_BOOTSTRAP_PASSWORD`. Open `/setup` over HTTPS, enter username `operator` and that password in the HTTP Basic prompt, then complete the SQLite installation and administrator setup. If the password is missing or setup is unavailable, stop and resolve the configuration; do not disable the guard. Keep the password and recovery key private.
+5. Create a test link and complete its tenant and platform approvals. Verify its public redirect and QR image. Keep the same volume and `APP_SECRET` through a normal redeploy and verify that the administrator session and link still work before storing important data.
+
+The single-service `docker-compose.yml` and its named `app_data` volume remain available for manual use; the full source-build Dockerfile, including the required Linux setup-auth tests, remains at `deploy/vibenest/Dockerfile`. For local Compose use, copy `.env.example` to `.env`, supply a unique bootstrap password of at least 24 characters, and set `COOKIE_SECURE=false` only for plain HTTP localhost. The original optional MySQL development stack remains in `docker-compose.dev.yml`. The upstream quick-start commands below target the upstream repository.
 
 ## 快速开始
 
