@@ -1,0 +1,1 @@
+FROM ghcr.io/nikitababenko/shortlink@sha256:3064194fec73afe3229172d9d9a146b4f35dad4c9bfc7a7a1688dd9b73f02728
