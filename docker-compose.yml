@@ -1,8 +1,8 @@
 services:
   app:
     build:
-      context: .
-      dockerfile: deploy/vibenest/Dockerfile.prebuilt
+      context: ./deploy/vibenest/prebuilt
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file: .env
     ports:
